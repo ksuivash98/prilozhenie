@@ -1,0 +1,26 @@
+{
+  "app": "ReadQuest",
+  "slogan": "Чтение превращается в настоящее приключение.",
+  "villain": "Пожиратель Букв",
+  "companion": "Луми",
+  "dragon_default_name": "Искорка",
+  "safety": {
+    "ads": false,
+    "iap": false,
+    "external_links": false,
+    "popups": false
+  },
+  "age_range": [5, 9],
+  "locations": [
+    "village",
+    "magic_forest",
+    "caves",
+    "castle",
+    "desert",
+    "ice_valley",
+    "volcano",
+    "sky_islands",
+    "underwater",
+    "cosmos"
+  ]
+}

@@ -1,0 +1,90 @@
+name: readquest
+description: >
+  ReadQuest — коммерческое мобильное приложение для обучения детей чтению
+  через игровое приключение. Чтение превращается в настоящее приключение.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+  flutter: '>=3.24.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management & DI
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Local storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.5.3
+
+  # Firebase readiness (optional activation)
+  # firebase_core: ^3.13.0
+  # firebase_analytics: ^11.4.5
+  # firebase_crashlytics: ^4.3.5
+
+  # Animation & game
+  lottie: ^3.3.1
+  flame: ^1.25.0
+  flame_audio: ^2.11.0
+
+  # Typography & i18n
+  google_fonts: ^6.2.1
+  intl: ^0.20.2
+
+  # Speech & audio
+  flutter_tts: ^4.2.2
+  speech_to_text: ^7.0.0
+  just_audio: ^0.9.46
+  audioplayers: ^6.4.0
+
+  # Utilities
+  uuid: ^4.5.1
+  equatable: ^2.0.7
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  collection: ^1.19.1
+  path_provider: ^2.1.5
+  logger: ^2.5.0
+  connectivity_plus: ^6.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.15
+  riverpod_generator: ^2.6.5
+  freezed: ^2.5.8
+  json_serializable: ^6.9.5
+  hive_generator: ^2.0.1
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/animations/
+    - assets/audio/music/
+    - assets/audio/sfx/
+    - assets/audio/voice/
+    - assets/images/characters/
+    - assets/images/locations/
+    - assets/images/ui/
+    - assets/images/items/
+    - assets/images/dragon/
+    - assets/images/bosses/
+    - assets/stories/
+    - assets/data/
+
+  # OpenDyslexic подключается в runtime через AccessibilityService,
+  # когда файлы fonts размещены в assets/fonts/.
