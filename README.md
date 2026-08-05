@@ -1,39 +1,33 @@
-# ReadQuest
+# ReadQuest (Web)
 
 **Чтение превращается в настоящее приключение.**
 
-Коммерческое Flutter-приложение для детей 5–9 лет: обучение чтению через игровой мир.
-
-## Стек
-
-- Flutter 3.24+ / Dart 3.5+
-- Riverpod, go_router, Hive, SharedPreferences
-- Flame, Lottie, Google Fonts
-- flutter_tts, speech_to_text, just_audio, audioplayers
-
-## Архитектура
-
-Clean Architecture · Feature First · MVVM · Repository · Use Cases · DI
+Веб-приложение для детей 5–9 лет: обучение чтению через игровой мир.
 
 ## Запуск
 
-1. Установите [Flutter SDK](https://docs.flutter.dev/get-started/install)
-2. В корне проекта:
-
 ```bash
-flutter pub get
-flutter run
+npm install
+npm run dev
 ```
 
-## Безопасность продукта
+Сборка:
 
-- Нет рекламы
-- Нет покупок
-- Нет внешних ссылок
-- Нет навязчивых pop-up
-- Родительский PIN
-- OpenDyslexic / крупный текст / TTS / контраст / скорость анимаций
+```bash
+npm run build
+npm run preview
+```
 
-## Структура
+## Что внутри
 
-`lib/core` — ядро · `lib/features/*` — игровые механики · `assets` — контент
+- Живой мир (оживает от чтения, сереет без него)
+- Карта из 10 локаций и боссы
+- Дракон, который растёт от чтения
+- 20 мини-игр
+- Библиотека рассказов
+- Город зданий
+- Достижения
+- Родительский PIN + экспорт статистики
+- Без рекламы, покупок и внешних ссылок
+
+Прогресс сохраняется в `localStorage`.
