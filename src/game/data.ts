@@ -10,7 +10,8 @@ export type LocationId =
   | 'volcano'
   | 'sky_islands'
   | 'underwater'
-  | 'cosmos';
+  | 'cosmos'
+  | 'dragon_land';
 
 export interface Location {
   id: LocationId;
@@ -39,7 +40,9 @@ export interface GameState {
   wordsRead: number;
   xp: number;
   coins: number;
+  crystals: number;
   level: number;
+  readingLevel: number;
   vitality: number;
   lastReadAt: number;
   unlockedLocations: LocationId[];
@@ -51,11 +54,18 @@ export interface GameState {
   streak: number;
   correct: number;
   errors: number;
+  attempts: number;
   hardWords: Record<string, number>;
+  hardLetters: Record<string, number>;
+  completedUnits: string[];
   parentPin: string | null;
   storiesRead: string[];
   completedQuests: string[];
   bestScores: Record<string, number>;
+  soundEnabled: boolean;
+  highContrast: boolean;
+  reduceMotion: boolean;
+  largeText: boolean;
 }
 
 export const LOCATIONS: Location[] = [
@@ -169,6 +179,17 @@ export const LOCATIONS: Location[] = [
     boss: 'Пожиратель Букв',
     bossHp: 100,
   },
+  {
+    id: 'dragon_land',
+    name: 'Земля драконов',
+    emoji: '🐉',
+    description: 'Здесь драконы учат читать древние руны.',
+    x: 30,
+    y: 18,
+    word: 'дракон',
+    boss: 'Страж Рун',
+    bossHp: 110,
+  },
 ];
 
 export const MINI_GAMES: MiniGame[] = [
@@ -241,6 +262,11 @@ export const LUMI = {
     'Ура! Ты прочитал это слово — мир стал ярче!',
     'Потрясающе! Дракон гордится тобой!',
     'Волшебно! Ещё одно слово вернулось домой.',
+  ],
+  guide: [
+    'Сначала попробуй прочитать сам — я рядом!',
+    'Нажми 🎤 и произнеси слово вслух.',
+    'Если будет трудно — потом послушаем вместе.',
   ],
 };
 

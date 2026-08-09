@@ -1,0 +1,19 @@
+{
+  "name": "ReadQuest",
+  "short_name": "ReadQuest",
+  "description": "Чтение превращается в настоящее приключение.",
+  "start_url": "/prilozhenie/",
+  "scope": "/prilozhenie/",
+  "display": "standalone",
+  "background_color": "#7EC8E3",
+  "theme_color": "#FF6F61",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

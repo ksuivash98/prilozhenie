@@ -100,12 +100,14 @@ export function MiniGamePage() {
 
       <ReadingChallenge
         prompt="Закрепи победу чтением"
-        target={game.word}
+        target={game.word.toUpperCase()}
         storyBeat="Прочитай слово мини-игры"
-        onSuccess={() => {
+        xp={10}
+        coins={3}
+        onSuccess={({ xp, coins }) => {
           setScore((s) => s + 5);
           setMessage('Слово прочитано! +5');
-          setState((s) => registerCorrectWord(s, game.word, { xp: 10, coins: 3 }));
+          setState((s) => registerCorrectWord(s, game.word, { xp, coins }));
         }}
       />
     </Page>

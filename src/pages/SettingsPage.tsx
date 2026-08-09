@@ -1,38 +1,57 @@
 import { Page } from '../components/Page';
-import { initialState, useGame } from '../game/store';
+import { useGame } from '../game/store';
 
 export function SettingsPage() {
-  const { setState } = useGame();
+  const { state, setState } = useGame();
 
   return (
     <Page title="Настройки">
       <div className="card stack">
         <p>
-          <strong>Безопасность продукта</strong>
+          <strong>Безопасность</strong>
         </p>
         <p className="muted">
-          Нет рекламы. Нет покупок. Нет внешних ссылок. Нет всплывающих окон.
+          Нет рекламы. Нет покупок. Голос не записывается и не отправляется на сервер.
         </p>
       </div>
+
       <div className="card stack">
         <p>
-          <strong>Доступность</strong>
+          <strong>Звук и доступность</strong>
         </p>
-        <p className="muted">
-          Озвучивание работает через кнопку 🔊. Крупный текст уже включён в дизайн для детей 5–9 лет.
-        </p>
+        <label className="row">
+          <input
+            type="checkbox"
+            checked={state.soundEnabled}
+            onChange={(e) => setState((s) => ({ ...s, soundEnabled: e.target.checked }))}
+          />
+          Звук озвучки
+        </label>
+        <label className="row">
+          <input
+            type="checkbox"
+            checked={state.largeText}
+            onChange={(e) => setState((s) => ({ ...s, largeText: e.target.checked }))}
+          />
+          Крупный текст
+        </label>
+        <label className="row">
+          <input
+            type="checkbox"
+            checked={state.highContrast}
+            onChange={(e) => setState((s) => ({ ...s, highContrast: e.target.checked }))}
+          />
+          Высокий контраст
+        </label>
+        <label className="row">
+          <input
+            type="checkbox"
+            checked={state.reduceMotion}
+            onChange={(e) => setState((s) => ({ ...s, reduceMotion: e.target.checked }))}
+          />
+          Меньше анимаций
+        </label>
       </div>
-      <button
-        type="button"
-        className="btn ghost"
-        onClick={() => {
-          if (confirm('Сбросить весь прогресс?')) {
-            setState(() => initialState());
-          }
-        }}
-      >
-        Сбросить прогресс
-      </button>
     </Page>
   );
 }

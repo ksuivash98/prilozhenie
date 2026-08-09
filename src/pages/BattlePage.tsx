@@ -44,15 +44,18 @@ export function BattlePage() {
 
       {!victory ? (
         <ReadingChallenge
+          key={`${word}-${combo}`}
           prompt="Прочитай ударное слово"
-          target={word}
+          target={word.toUpperCase()}
           storyBeat="Длинные слова дают больше силы"
-          onSuccess={() => {
+          xp={8 + word.length}
+          coins={word.length}
+          onSuccess={({ xp, coins }) => {
             const damage = Math.max(3, word.length + Math.floor(combo / 2));
             const nextHp = Math.max(0, hp - damage);
             setHp(nextHp);
             setCombo((c) => c + 1);
-            setState((s) => registerCorrectWord(s, word, { xp: 8 + word.length, coins: word.length }));
+            setState((s) => registerCorrectWord(s, word, { xp, coins }));
             if (nextHp === 0) {
               setVictory(true);
               setState((s) => unlockNextLocation({ ...s, currentLocation: loc.id }));

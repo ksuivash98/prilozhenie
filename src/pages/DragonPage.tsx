@@ -26,10 +26,13 @@ export function DragonPage() {
 
       <ReadingChallenge
         prompt="Накорми дракона словом"
-        target="яблоко"
+        target="ЯБЛОКО"
+        emoji="🍎"
         storyBeat="Прочитай название еды"
-        onSuccess={() =>
-          setState((s) => registerCorrectWord(s, 'яблоко', { xp: 15, coins: 5 }))
+        xp={15}
+        coins={5}
+        onSuccess={({ xp, coins }) =>
+          setState((s) => registerCorrectWord(s, 'яблоко', { xp, coins }))
         }
       />
     </Page>

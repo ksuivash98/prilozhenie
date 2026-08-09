@@ -5,6 +5,7 @@ import { STAGE_EMOJI, STAGE_LABEL } from '../game/data';
 import { dragonXpNeed, useGame } from '../game/store';
 
 const TILES = [
+  { to: '/learn', emoji: '📖', label: 'Учёба', color: '#7cb342' },
   { to: '/adventure', emoji: '🗺️', label: 'Приключение', color: '#26a69a' },
   { to: '/dragon', emoji: '🐉', label: 'Дракон', color: '#ff6f61' },
   { to: '/mini-games', emoji: '🎮', label: 'Мини-игры', color: '#ec407a' },
@@ -73,6 +74,10 @@ export function HomePage() {
         <div className="card warm grow center stat">
           <div className="value">{state.coins}</div>
           <div className="muted">монеты</div>
+        </div>
+        <div className="card warm grow center stat">
+          <div className="value">{state.crystals}</div>
+          <div className="muted">кристаллы</div>
         </div>
       </div>
 

@@ -1,43 +1,64 @@
-# ReadQuest (Web)
+# ReadQuest
 
 **Чтение превращается в настоящее приключение.**
 
+Веб-приложение для детей 5–9 лет: ребёнок сначала читает сам, потом приложение проверяет голос, и только при необходимости помогает.
+
 Сайт: [https://ksuivash98.github.io/prilozhenie/](https://ksuivash98.github.io/prilozhenie/)
 
-## Почему был белый экран
-
-GitHub Pages отдавал **исходный** `index.html` со строкой:
-
-```html
-<script type="module" src="/src/main.tsx"></script>
-```
-
-Браузер на Pages **не умеет** запускать TypeScript/Vite-исходники. Нужна папка **сборки** (`dist` / `docs`) с готовыми `.js` и `.css`.
-
-## Как починить деплой (один раз)
-
-1. В GitHub открой репозиторий → **Settings → Pages**
-2. Source: **Deploy from a branch**
-3. Branch: `main`
-4. Folder: **/docs**
-5. Save
-
-После этого сайт возьмёт готовые файлы из папки `docs/` (уже собраны в проекте).
-
-Либо включи **GitHub Actions** (workflow `.github/workflows/deploy.yml`) и в Pages выбери Source: **GitHub Actions**.
-
-## Локально
+## Запуск
 
 ```bash
 npm install
 npm run dev
 ```
 
-Сборка в `docs/` для Pages:
-
 ```bash
 npm run build
-# скопируй содержимое dist/ в docs/
+npm run preview
+npm run test
+npm run build:pages   # сборка + копирование в docs/ для GitHub Pages
 ```
 
-Прогресс сохраняется в `localStorage`.
+## Главный принцип
+
+**Сначала ребёнок читает сам → потом проверка → помощь только при необходимости.**
+
+Озвучка слова не показывается до первых неудачных попыток.
+
+## Web Speech API
+
+- Распознавание: `SpeechRecognition` / `webkitSpeechRecognition` (лучше Chrome / Edge)
+- Озвучка: `SpeechSynthesis`
+- Голос **не записывается** и **не отправляется** на сервер
+- Если STT недоступен — режим «✓ Я прочитал»
+
+## Структура
+
+```
+src/
+  features/reading/   # ReadingChallenge (speech-first)
+  services/           # speechRecognition, fuzzyMatch, TTS
+  data/curriculum.ts  # буква → слог → слово → предложение
+  game/               # состояние, награды, карта
+  pages/              # экраны
+  components/         # UI
+```
+
+## PWA
+
+- `public/manifest.json`
+- `public/sw.js`
+- Можно «Добавить на главный экран»
+
+## GitHub Pages
+
+В Settings → Pages выбери branch `main` и папку **`/docs`**.
+
+## Ограничения браузеров
+
+| Функция | Chrome | Edge | Safari | Firefox |
+|--------|--------|------|--------|---------|
+| Игра    | ✅ | ✅ | ✅ | ✅ |
+| STT     | ✅ | ✅ | ⚠️ | ⚠️ |
+| TTS     | ✅ | ✅ | ✅ | ✅ |

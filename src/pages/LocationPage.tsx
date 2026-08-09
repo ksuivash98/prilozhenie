@@ -33,10 +33,13 @@ export function LocationPage() {
 
       <ReadingChallenge
         prompt="Почини путь силой слова"
-        target={loc.word}
+        target={loc.word.toUpperCase()}
+        emoji={loc.emoji}
         storyBeat="Прочитай → мир меняется"
-        onSuccess={() => {
-          setState((s) => registerCorrectWord(s, loc.word, { xp: 12, coins: 4 }));
+        xp={12}
+        coins={4}
+        onSuccess={({ xp, coins }) => {
+          setState((s) => registerCorrectWord(s, loc.word, { xp, coins }));
         }}
         onFail={() => setState((s) => registerWrongWord(s, loc.word))}
       />

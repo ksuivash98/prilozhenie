@@ -3,6 +3,7 @@ import { GameProvider } from './game/GameProvider';
 import { SplashPage } from './pages/SplashPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { HomePage } from './pages/HomePage';
+import { LearnPage } from './pages/LearnPage';
 import { AdventurePage } from './pages/AdventurePage';
 import { LocationPage } from './pages/LocationPage';
 import { BattlePage } from './pages/BattlePage';
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/" element={<SplashPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/home" element={<HomePage />} />
+        <Route path="/learn" element={<LearnPage />} />
         <Route path="/adventure" element={<AdventurePage />} />
         <Route path="/adventure/:locationId" element={<LocationPage />} />
         <Route path="/battle/:locationId" element={<BattlePage />} />

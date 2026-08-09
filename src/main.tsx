@@ -6,9 +6,17 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* HashRouter нужен для GitHub Pages: сервер не знает клиентские маршруты */}
     <HashRouter>
       <App />
     </HashRouter>
   </StrictMode>,
 );
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
+    void navigator.serviceWorker.register(swUrl).catch(() => {
+      /* PWA optional */
+    });
+  });
+}

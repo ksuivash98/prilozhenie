@@ -6,7 +6,7 @@ import {
   LOCATIONS,
 } from './data';
 
-const STORAGE_KEY = 'readquest_web_v1';
+const STORAGE_KEY = 'readquest_web_v2';
 
 export const initialState = (): GameState => ({
   playerName: '',
@@ -14,7 +14,9 @@ export const initialState = (): GameState => ({
   wordsRead: 0,
   xp: 0,
   coins: 0,
+  crystals: 0,
   level: 1,
+  readingLevel: 3,
   vitality: 0.55,
   lastReadAt: Date.now(),
   unlockedLocations: ['village'],
@@ -26,25 +28,36 @@ export const initialState = (): GameState => ({
   streak: 0,
   correct: 0,
   errors: 0,
+  attempts: 0,
   hardWords: {},
+  hardLetters: {},
+  completedUnits: [],
   parentPin: null,
   storiesRead: [],
   completedQuests: [],
   bestScores: {},
+  soundEnabled: true,
+  highContrast: false,
+  reduceMotion: false,
+  largeText: false,
 });
 
 export function loadState(): GameState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('readquest_web_v1');
     if (!raw) return initialState();
-    return { ...initialState(), ...JSON.parse(raw) as Partial<GameState> };
+    return { ...initialState(), ...(JSON.parse(raw) as Partial<GameState>) };
   } catch {
     return initialState();
   }
 }
 
 export function saveState(state: GameState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* storage unavailable */
+  }
 }
 
 export function normalize(text: string): string {
@@ -90,19 +103,30 @@ export function applyTimeDecay(state: GameState): GameState {
 
 export function registerCorrectWord(
   state: GameState,
-  _word: string,
-  reward = { xp: 10, coins: 3 },
+  word: string,
+  reward: { xp: number; coins: number; crystals?: number } = { xp: 10, coins: 3 },
+  unitId?: string,
 ): GameState {
   let next: GameState = {
     ...state,
     wordsRead: state.wordsRead + 1,
     xp: state.xp + reward.xp,
     coins: state.coins + reward.coins,
+    crystals: state.crystals + (reward.crystals ?? 0),
     correct: state.correct + 1,
+    attempts: state.attempts + 1,
     vitality: Math.min(1, state.vitality + 0.04),
     lastReadAt: Date.now(),
     dragonXp: state.dragonXp + reward.xp,
+    completedUnits: unitId && !state.completedUnits.includes(unitId)
+      ? [...state.completedUnits, unitId]
+      : state.completedUnits,
   };
+
+  // Адаптив: повышаем readingLevel после серии успехов
+  if (next.correct > 0 && next.correct % 8 === 0 && next.readingLevel < 6) {
+    next = { ...next, readingLevel: next.readingLevel + 1 };
+  }
 
   while (next.xp >= xpToNextLevel(next.level)) {
     next = {
@@ -121,17 +145,37 @@ export function registerCorrectWord(
     };
   }
 
+  void word;
   return next;
 }
 
 export function registerWrongWord(state: GameState, word: string): GameState {
   const hardWords = { ...state.hardWords };
   hardWords[word] = (hardWords[word] ?? 0) + 1;
+  const hardLetters = { ...state.hardLetters };
+  for (const ch of word.toLowerCase()) {
+    if (/[а-яa-z]/i.test(ch)) {
+      hardLetters[ch] = (hardLetters[ch] ?? 0) + 1;
+    }
+  }
   return {
     ...state,
     errors: state.errors + 1,
+    attempts: state.attempts + 1,
     hardWords,
+    hardLetters,
   };
+}
+
+/** Подбирает слова для тренировки сложных букв. */
+export function adaptivePracticeWords(state: GameState): string[] {
+  const hard = Object.entries(state.hardLetters)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([l]) => l);
+  if (hard.length === 0) return ['кот', 'дом', 'лес'];
+  const bank = ['рыба', 'шапка', 'жук', 'щит', 'река', 'машина', 'солнце'];
+  return bank.filter((w) => hard.some((l) => w.includes(l))).slice(0, 5);
 }
 
 export function unlockNextLocation(state: GameState): GameState {
@@ -147,6 +191,7 @@ export function unlockNextLocation(state: GameState): GameState {
     bossesDefeated: state.bossesDefeated + 1,
     xp: state.xp + 100,
     coins: state.coins + 25,
+    crystals: state.crystals + 1,
   };
 }
 
@@ -173,4 +218,9 @@ export function useGame(): GameContextValue {
 
 export function locationById(id: LocationId) {
   return LOCATIONS.find((l) => l.id === id);
+}
+
+export function successRate(state: GameState): number {
+  if (state.attempts === 0) return 100;
+  return Math.round((state.correct / state.attempts) * 100);
 }

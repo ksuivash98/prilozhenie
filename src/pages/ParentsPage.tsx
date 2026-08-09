@@ -36,14 +36,14 @@ export function ParentsPage() {
       wordsRead: state.wordsRead,
       correct: state.correct,
       errors: state.errors,
-      accuracy:
-        state.correct + state.errors === 0
-          ? 1
-          : state.correct / (state.correct + state.errors),
+      attempts: state.attempts,
+      accuracy: state.attempts === 0 ? 1 : state.correct / state.attempts,
+      readingLevel: state.readingLevel,
       level: state.level,
       bossesDefeated: state.bossesDefeated,
       dragonStage: state.dragonStage,
       hardWords: state.hardWords,
+      hardLetters: state.hardLetters,
       exportedAt: new Date().toISOString(),
     };
     void navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
@@ -87,12 +87,16 @@ export function ParentsPage() {
     );
   }
 
-  const total = state.correct + state.errors;
+  const total = state.attempts;
   const accuracy = total === 0 ? 100 : Math.round((state.correct / total) * 100);
   const hard = Object.entries(state.hardWords)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([w]) => w);
+  const hardLetters = Object.entries(state.hardLetters)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([l]) => l.toUpperCase());
 
   return (
     <Page title="Для родителей">
@@ -103,26 +107,32 @@ export function ParentsPage() {
         </div>
         <div className="card warm stat">
           <div className="value">{accuracy}%</div>
-          <div className="muted">точность</div>
+          <div className="muted">успех</div>
         </div>
         <div className="card warm stat">
-          <div className="value">{state.level}</div>
-          <div className="muted">уровень</div>
+          <div className="value">{state.attempts}</div>
+          <div className="muted">попыток</div>
         </div>
         <div className="card warm stat">
-          <div className="value">{state.bossesDefeated}</div>
-          <div className="muted">боссов</div>
+          <div className="value">{state.readingLevel}</div>
+          <div className="muted">ур. чтения</div>
         </div>
       </div>
       <div className="card stack">
         <strong>Наблюдение</strong>
         <p>
+          Успешных чтений: {state.correct}. Повторных попыток: {state.errors}.
+        </p>
+        <p>
           {hard.length === 0
             ? 'Сложных слов пока нет — отличный старт!'
             : `Стоит мягко повторить: ${hard.join(', ')}.`}
         </p>
+        {hardLetters.length > 0 && (
+          <p className="muted">Буквы для тренировки: {hardLetters.join(', ')}</p>
+        )}
         <p className="muted">
-          Все награды зарабатываются чтением. Рекламы и покупок нет.
+          Голос ребёнка не сохраняется. Рекламы и покупок нет.
         </p>
       </div>
       <button type="button" className="btn secondary" onClick={exportStats}>

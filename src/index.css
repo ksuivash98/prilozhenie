@@ -530,3 +530,46 @@ p {
     font-size: 1.35rem;
   }
 }
+
+.mic-btn {
+  width: 100%;
+  font-size: 1.25rem;
+  min-height: 64px;
+  border-radius: 22px !important;
+}
+
+.listening-pulse {
+  font-weight: 800;
+  color: var(--danger);
+  animation: bounceSoft 1s ease-in-out infinite;
+}
+
+.reward-line {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--meadow-deep);
+}
+
+.reading-challenge .reading-word {
+  user-select: none;
+}
+
+html.high-contrast body,
+html.high-contrast .living-bg {
+  filter: contrast(1.25);
+}
+
+html.large-text {
+  font-size: 18px;
+}
+
+html.large-text .reading-word {
+  font-size: clamp(2.4rem, 10vw, 3.6rem) !important;
+}
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
