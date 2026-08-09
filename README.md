@@ -2,45 +2,42 @@
 
 **Чтение превращается в настоящее приключение.**
 
-Веб-приложение для детей 5–9 лет: обучение чтению через игровой мир.
+Сайт: [https://ksuivash98.github.io/prilozhenie/](https://ksuivash98.github.io/prilozhenie/)
 
-## Запуск локально
+## Почему был белый экран
+
+GitHub Pages отдавал **исходный** `index.html` со строкой:
+
+```html
+<script type="module" src="/src/main.tsx"></script>
+```
+
+Браузер на Pages **не умеет** запускать TypeScript/Vite-исходники. Нужна папка **сборки** (`dist` / `docs`) с готовыми `.js` и `.css`.
+
+## Как починить деплой (один раз)
+
+1. В GitHub открой репозиторий → **Settings → Pages**
+2. Source: **Deploy from a branch**
+3. Branch: `main`
+4. Folder: **/docs**
+5. Save
+
+После этого сайт возьмёт готовые файлы из папки `docs/` (уже собраны в проекте).
+
+Либо включи **GitHub Actions** (workflow `.github/workflows/deploy.yml`) и в Pages выбери Source: **GitHub Actions**.
+
+## Локально
 
 ```bash
 npm install
 npm run dev
 ```
 
-Сборка:
+Сборка в `docs/` для Pages:
 
 ```bash
 npm run build
-npm run preview
+# скопируй содержимое dist/ в docs/
 ```
-
-## Публикация на GitHub Pages
-
-1. Выполни сборку: `npm run build`
-2. В репозитории GitHub: **Settings → Pages → Deploy from branch**
-3. Укажи папку `/docs` **или** загрузи содержимое `dist/` через GitHub Actions / ветку `gh-pages`
-
-Важно:
-- В проекте стоит `base: './'` — пути к CSS/JS относительные
-- Используется `HashRouter` — ссылки вида `.../index.html#/home`
-- Открывай именно **GitHub Pages URL** сайта, а не «сырой» просмотр файла в репозитории
-
-Если сайт лежит в проекте `https://USERNAME.github.io/REPO/`, после деплоя открой этот адрес — приложение стартует на `#/`.
-
-## Что внутри
-
-- Живой мир (оживает от чтения, сереет без него)
-- Карта из 10 локаций и боссы
-- Дракон, который растёт от чтения
-- 20 мини-игр
-- Библиотека рассказов
-- Город зданий
-- Достижения
-- Родительский PIN + экспорт статистики
-- Без рекламы, покупок и внешних ссылок
 
 Прогресс сохраняется в `localStorage`.

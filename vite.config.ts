@@ -1,9 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// base: './' — чтобы CSS/JS открывались на GitHub Pages
-// (и из подпапки репозитория, и с относительными путями)
+// Путь репозитория на GitHub Pages: https://ksuivash98.github.io/prilozhenie/
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: '/prilozhenie/',
 })
