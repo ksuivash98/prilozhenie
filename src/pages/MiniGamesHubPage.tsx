@@ -1,19 +1,24 @@
 import { Link } from 'react-router-dom';
 import { Page } from '../components/Page';
 import { MINI_GAMES } from '../game/data';
-import { useGame } from '../game/store';
+import { unlockProgressWords, useGame } from '../game/store';
 
 export function MiniGamesHubPage() {
   const { state } = useGame();
+  const progress = unlockProgressWords(state);
 
   return (
     <Page title="Мини-игры">
       <div className="card">
-        20 игр. Каждая открывается чтением. Сейчас у тебя {state.wordsRead} слов.
+        20 игр. Каждая открывается чтением. Сейчас ты выучил {state.uniqueWords}{' '}
+        слов
+        {state.legacyWordsRead
+          ? ` (прогресс открытий: ${progress})`
+          : ''}.
       </div>
       <div className="grid hub">
         {MINI_GAMES.map((g) => {
-          const unlocked = state.wordsRead >= g.unlockWords;
+          const unlocked = progress >= g.unlockWords;
           return unlocked ? (
             <Link
               key={g.id}

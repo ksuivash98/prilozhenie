@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LumiBubble } from '../components/LumiBubble';
 import { ReadingChallenge } from '../features/reading/ReadingChallenge';
-import { registerCorrectWord, registerWrongWord, useGame } from '../game/store';
+import {
+  registerCorrectWordDetailed,
+  registerWrongWord,
+  useGame,
+} from '../game/store';
 
 /**
  * Онбординг: имя → первое слово «КОТ» голосом → карта.
@@ -45,13 +49,24 @@ export function OnboardingPage() {
           storyBeat="Нажми 🎤 и прочитай вслух"
           xp={12}
           coins={5}
-          onSuccess={({ xp, coins }) => {
-            setState((s) => ({
-              ...registerCorrectWord(s, 'кот', { xp, coins, crystals: 1 }),
-              onboardingDone: true,
-              crystals: s.crystals + 1,
-            }));
+          onSuccess={() => {
+            let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
+            setState((s) => {
+              const r = registerCorrectWordDetailed(s, 'кот', {
+                xp: 12,
+                coins: 5,
+                crystals: 1,
+              });
+              result = {
+                xp: r.xp,
+                coins: r.coins,
+                isNewWord: r.isNewWord,
+                message: r.message,
+              };
+              return { ...r.state, onboardingDone: true };
+            });
             navigate('/home', { replace: true });
+            return result;
           }}
           onFail={() => setState((s) => registerWrongWord(s, 'кот'))}
         />

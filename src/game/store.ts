@@ -5,6 +5,15 @@ import {
   type LocationId,
   LOCATIONS,
 } from './data';
+import { STATISTICS_VERSION } from '../types/readingStats';
+import {
+  migrateReadingStats,
+  recordFailedReading,
+  recordSuccessfulReading,
+  unlockProgressWords,
+} from '../services/readingStatsService';
+
+export { unlockProgressWords };
 
 const STORAGE_KEY = 'readquest_web_v2';
 
@@ -12,6 +21,13 @@ export const initialState = (): GameState => ({
   playerName: '',
   onboardingDone: false,
   wordsRead: 0,
+  uniqueWords: 0,
+  successfulAttempts: 0,
+  repeatedWords: 0,
+  masteredWords: 0,
+  statisticsVersion: STATISTICS_VERSION,
+  readingRecords: {},
+  dailySessions: {},
   xp: 0,
   coins: 0,
   crystals: 0,
@@ -46,7 +62,9 @@ export function loadState(): GameState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('readquest_web_v1');
     if (!raw) return initialState();
-    return { ...initialState(), ...(JSON.parse(raw) as Partial<GameState>) };
+    const parsed = JSON.parse(raw) as Partial<GameState>;
+    const migrated = migrateReadingStats(parsed);
+    return { ...initialState(), ...migrated };
   } catch {
     return initialState();
   }
@@ -101,70 +119,56 @@ export function applyTimeDecay(state: GameState): GameState {
   return { ...state, vitality };
 }
 
+export type CorrectWordResult = {
+  state: GameState;
+  isNewWord: boolean;
+  isRepeat: boolean;
+  xp: number;
+  coins: number;
+  crystals: number;
+  message: string;
+};
+
+/**
+ * Успешное чтение: уникальные слова и полная награда — только при первом успехе.
+ * Повторы увеличивают attempts/successfulAttempts, но не wordsRead/uniqueWords.
+ */
 export function registerCorrectWord(
   state: GameState,
   word: string,
-  reward: { xp: number; coins: number; crystals?: number } = { xp: 10, coins: 3 },
+  reward: { xp: number; coins: number; crystals?: number } = { xp: 10, coins: 5 },
   unitId?: string,
 ): GameState {
-  let next: GameState = {
-    ...state,
-    wordsRead: state.wordsRead + 1,
-    xp: state.xp + reward.xp,
-    coins: state.coins + reward.coins,
-    crystals: state.crystals + (reward.crystals ?? 0),
-    correct: state.correct + 1,
-    attempts: state.attempts + 1,
-    vitality: Math.min(1, state.vitality + 0.04),
-    lastReadAt: Date.now(),
-    dragonXp: state.dragonXp + reward.xp,
-    completedUnits: unitId && !state.completedUnits.includes(unitId)
-      ? [...state.completedUnits, unitId]
-      : state.completedUnits,
-  };
-
-  // Адаптив: повышаем readingLevel после серии успехов
-  if (next.correct > 0 && next.correct % 8 === 0 && next.readingLevel < 6) {
-    next = { ...next, readingLevel: next.readingLevel + 1 };
-  }
-
-  while (next.xp >= xpToNextLevel(next.level)) {
-    next = {
-      ...next,
-      xp: next.xp - xpToNextLevel(next.level),
-      level: next.level + 1,
-    };
-  }
-
-  const need = dragonXpNeed(next.dragonStage);
-  if (need > 0 && next.dragonXp >= need && next.dragonStage !== 'legendary') {
-    next = {
-      ...next,
-      dragonStage: nextStage(next.dragonStage),
-      dragonXp: next.dragonXp - need,
-    };
-  }
-
-  void word;
-  return next;
+  return registerCorrectWordDetailed(state, word, reward, unitId).state;
 }
 
-export function registerWrongWord(state: GameState, word: string): GameState {
-  const hardWords = { ...state.hardWords };
-  hardWords[word] = (hardWords[word] ?? 0) + 1;
-  const hardLetters = { ...state.hardLetters };
-  for (const ch of word.toLowerCase()) {
-    if (/[а-яa-z]/i.test(ch)) {
-      hardLetters[ch] = (hardLetters[ch] ?? 0) + 1;
-    }
-  }
+export function registerCorrectWordDetailed(
+  state: GameState,
+  word: string,
+  reward: { xp: number; coins: number; crystals?: number } = { xp: 10, coins: 5 },
+  unitId?: string,
+): CorrectWordResult {
+  const outcome = recordSuccessfulReading(state, word, {
+    unitId,
+    newWordReward: {
+      xp: reward.xp,
+      coins: reward.coins,
+      crystals: reward.crystals,
+    },
+  });
   return {
-    ...state,
-    errors: state.errors + 1,
-    attempts: state.attempts + 1,
-    hardWords,
-    hardLetters,
+    state: outcome.state,
+    isNewWord: outcome.isNewWord,
+    isRepeat: outcome.isRepeat,
+    xp: outcome.reward.xp,
+    coins: outcome.reward.coins,
+    crystals: outcome.reward.crystals,
+    message: outcome.message,
   };
+}
+
+export function registerWrongWord(state: GameState, word: string, unitId?: string): GameState {
+  return recordFailedReading(state, word, unitId);
 }
 
 /** Подбирает слова для тренировки сложных букв. */
@@ -222,5 +226,6 @@ export function locationById(id: LocationId) {
 
 export function successRate(state: GameState): number {
   if (state.attempts === 0) return 100;
-  return Math.round((state.correct / state.attempts) * 100);
+  const success = state.successfulAttempts || state.correct;
+  return Math.round((success / state.attempts) * 100);
 }

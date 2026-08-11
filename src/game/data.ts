@@ -37,7 +37,25 @@ export interface MiniGame {
 export interface GameState {
   playerName: string;
   onboardingDone: boolean;
+  /**
+   * Главный счётчик «прочитано / выучено слов» = uniqueWords.
+   * Не путать с successfulAttempts.
+   */
   wordsRead: number;
+  /** Уникальные слова с хотя бы одним успешным чтением. */
+  uniqueWords: number;
+  /** Все успешные чтения (включая повторы). */
+  successfulAttempts: number;
+  /** Повторные успешные чтения уже известных слов. */
+  repeatedWords: number;
+  /** Слова с isMastered. */
+  masteredWords: number;
+  /** Версия схемы статистики (миграция). */
+  statisticsVersion: number;
+  /** Старый счётчик до миграции (legacy, не использовать как прогресс). */
+  legacyWordsRead?: number;
+  readingRecords: Record<string, import('../types/readingStats').ReadingRecord>;
+  dailySessions: Record<string, import('../types/readingStats').ReadingSession>;
   xp: number;
   coins: number;
   crystals: number;
@@ -52,6 +70,7 @@ export interface GameState {
   dragonXp: number;
   bossesDefeated: number;
   streak: number;
+  /** @deprecated alias successfulAttempts — для совместимости UI */
   correct: number;
   errors: number;
   attempts: number;

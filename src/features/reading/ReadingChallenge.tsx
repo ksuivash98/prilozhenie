@@ -7,6 +7,13 @@ import {
 import { speechSynthesisService } from '../../services/speechSynthesisService';
 import type { ReadingChallengeState } from '../../types/speech';
 
+export interface ReadingSuccessMeta {
+  xp: number;
+  coins: number;
+  isNewWord: boolean;
+  message: string;
+}
+
 export interface ReadingChallengeProps {
   prompt?: string;
   target: string;
@@ -14,8 +21,13 @@ export interface ReadingChallengeProps {
   storyBeat?: string;
   /** После скольких неудач показать «Послушать». */
   helpAfterFails?: number;
-  onSuccess: (meta: { xp: number; coins: number }) => void;
+  /**
+   * Должен применить запись в store и вернуть фактическую награду
+   * (0 XP/монет при повторе слова).
+   */
+  onSuccess: () => ReadingSuccessMeta;
   onFail?: () => void;
+  /** Подсказка награды за НОВОЕ слово (фактическая награда приходит из onSuccess). */
   xp?: number;
   coins?: number;
 }
@@ -50,6 +62,8 @@ export function ReadingChallenge({
   const [heard, setHeard] = useState('');
   const [message, setMessage] = useState('');
   const [helped, setHelped] = useState(false);
+  const [earnedXp, setEarnedXp] = useState(xp);
+  const [earnedCoins, setEarnedCoins] = useState(coins);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -69,10 +83,16 @@ export function ReadingChallenge({
   }, [target, supported]);
 
   const finishSuccess = useCallback(() => {
+    const result = onSuccess();
     setPhase('success');
-    setMessage(PRAISE[fails % PRAISE.length]);
-    onSuccess({ xp, coins });
-  }, [coins, fails, onSuccess, xp]);
+    setEarnedXp(result.xp);
+    setEarnedCoins(result.coins);
+    setMessage(
+      result.isNewWord
+        ? result.message || PRAISE[fails % PRAISE.length]
+        : result.message || '🔄 Отличное повторение!',
+    );
+  }, [fails, onSuccess]);
 
   const startListening = useCallback(async () => {
     if (!supported) {
@@ -168,10 +188,16 @@ export function ReadingChallenge({
               <p className="feedback ok" style={{ fontSize: '1.35rem' }}>
                 {message}
               </p>
-              <p>Ты прочитал слово!</p>
-              <p className="reward-line">
-                +{xp} ⭐ &nbsp; +{coins} 🪙
+              <p>
+                {earnedXp > 0 || earnedCoins > 0
+                  ? 'Ты выучил новое слово!'
+                  : 'Ты потренировался — так закрепляется чтение!'}
               </p>
+              {(earnedXp > 0 || earnedCoins > 0) && (
+                <p className="reward-line">
+                  +{earnedXp} ⭐ &nbsp; +{earnedCoins} 🪙
+                </p>
+              )}
             </motion.div>
           )}
           {(phase === 'retry' || phase === 'help') && (

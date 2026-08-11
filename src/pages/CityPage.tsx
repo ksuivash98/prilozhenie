@@ -1,6 +1,6 @@
 import { Page } from '../components/Page';
 import { Meter } from '../components/Meter';
-import { useGame } from '../game/store';
+import { unlockProgressWords, useGame } from '../game/store';
 
 const BUILDINGS = [
   { id: 'house', name: 'Дом', emoji: '🏠', need: 0, feature: 'Отдых дракона' },
@@ -15,17 +15,24 @@ const BUILDINGS = [
 
 export function CityPage() {
   const { state } = useGame();
-  const unlocked = BUILDINGS.filter((b) => state.wordsRead >= b.need).length;
+  const progress = unlockProgressWords(state);
+  const unlocked = BUILDINGS.filter((b) => progress >= b.need).length;
 
   return (
     <Page title="Твой город">
       <div className="card warm stack">
-        <Meter label="Красота города" value={unlocked / BUILDINGS.length} trailing={`${unlocked}/${BUILDINGS.length}`} />
-        <p className="muted">Здания открываются только за чтение.</p>
+        <Meter
+          label="Красота города"
+          value={unlocked / BUILDINGS.length}
+          trailing={`${unlocked}/${BUILDINGS.length}`}
+        />
+        <p className="muted">
+          Здания открываются за выученные слова. Выучено: {state.uniqueWords}.
+        </p>
       </div>
       <div className="grid hub">
         {BUILDINGS.map((b) => {
-          const open = state.wordsRead >= b.need;
+          const open = progress >= b.need;
           return (
             <div
               key={b.id}

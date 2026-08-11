@@ -3,7 +3,12 @@ import { Page } from '../components/Page';
 import { LumiBubble } from '../components/LumiBubble';
 import { ReadingChallenge } from '../features/reading/ReadingChallenge';
 import { KIND_LABEL, nextCurriculumUnit } from '../data/curriculum';
-import { adaptivePracticeWords, registerCorrectWord, registerWrongWord, useGame } from '../game/store';
+import {
+  adaptivePracticeWords,
+  registerCorrectWordDetailed,
+  registerWrongWord,
+  useGame,
+} from '../game/store';
 
 /** Учебная лестница и адаптивные повторы сложных букв. */
 export function LearnPage() {
@@ -28,9 +33,23 @@ export function LearnPage() {
               prompt="Тренировка сложных букв"
               target={practice.toUpperCase()}
               emoji="💪"
-              onSuccess={({ xp, coins }) =>
-                setState((s) => registerCorrectWord(s, practice, { xp, coins }))
-              }
+              onSuccess={() => {
+                let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
+                setState((s) => {
+                  const r = registerCorrectWordDetailed(s, practice, {
+                    xp: 10,
+                    coins: 5,
+                  });
+                  result = {
+                    xp: r.xp,
+                    coins: r.coins,
+                    isNewWord: r.isNewWord,
+                    message: r.message,
+                  };
+                  return r.state;
+                });
+                return result;
+              }}
               onFail={() => setState((s) => registerWrongWord(s, practice))}
             />
           )}
@@ -55,9 +74,25 @@ export function LearnPage() {
         emoji={unit.emoji}
         xp={unit.xp}
         coins={unit.coins}
-        onSuccess={({ xp, coins }) =>
-          setState((s) => registerCorrectWord(s, unit.text, { xp, coins }, unit.id))
-        }
+        onSuccess={() => {
+          let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
+          setState((s) => {
+            const r = registerCorrectWordDetailed(
+              s,
+              unit.text,
+              { xp: unit.xp, coins: unit.coins },
+              unit.id,
+            );
+            result = {
+              xp: r.xp,
+              coins: r.coins,
+              isNewWord: r.isNewWord,
+              message: r.message,
+            };
+            return r.state;
+          });
+          return result;
+        }}
         onFail={() => setState((s) => registerWrongWord(s, unit.text))}
       />
     </Page>

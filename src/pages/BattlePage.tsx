@@ -3,7 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Page } from '../components/Page';
 import { ReadingChallenge } from '../components/ReadingChallenge';
 import { Meter } from '../components/Meter';
-import { locationById, registerCorrectWord, unlockNextLocation, useGame } from '../game/store';
+import {
+  locationById,
+  registerCorrectWordDetailed,
+  unlockNextLocation,
+  useGame,
+} from '../game/store';
 
 const STRIKE_WORDS = ['искра', 'радуга', 'дракон', 'приключение', 'смелость'];
 
@@ -50,16 +55,30 @@ export function BattlePage() {
           storyBeat="Длинные слова дают больше силы"
           xp={8 + word.length}
           coins={word.length}
-          onSuccess={({ xp, coins }) => {
+          onSuccess={() => {
             const damage = Math.max(3, word.length + Math.floor(combo / 2));
             const nextHp = Math.max(0, hp - damage);
             setHp(nextHp);
             setCombo((c) => c + 1);
-            setState((s) => registerCorrectWord(s, word, { xp, coins }));
+            let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
+            setState((s) => {
+              const r = registerCorrectWordDetailed(s, word, {
+                xp: 8 + word.length,
+                coins: word.length,
+              });
+              result = {
+                xp: r.xp,
+                coins: r.coins,
+                isNewWord: r.isNewWord,
+                message: r.message,
+              };
+              return r.state;
+            });
             if (nextHp === 0) {
               setVictory(true);
               setState((s) => unlockNextLocation({ ...s, currentLocation: loc.id }));
             }
+            return result;
           }}
           onFail={() => setCombo(0)}
         />

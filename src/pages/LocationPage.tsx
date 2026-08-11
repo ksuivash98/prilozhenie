@@ -2,7 +2,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Page } from '../components/Page';
 import { ReadingChallenge } from '../components/ReadingChallenge';
 import { LumiBubble } from '../components/LumiBubble';
-import { locationById, registerCorrectWord, registerWrongWord, useGame } from '../game/store';
+import {
+  locationById,
+  registerCorrectWordDetailed,
+  registerWrongWord,
+  useGame,
+} from '../game/store';
 
 export function LocationPage() {
   const { locationId = 'village' } = useParams();
@@ -38,8 +43,19 @@ export function LocationPage() {
         storyBeat="Прочитай → мир меняется"
         xp={12}
         coins={4}
-        onSuccess={({ xp, coins }) => {
-          setState((s) => registerCorrectWord(s, loc.word, { xp, coins }));
+        onSuccess={() => {
+          let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
+          setState((s) => {
+            const r = registerCorrectWordDetailed(s, loc.word, { xp: 12, coins: 4 });
+            result = {
+              xp: r.xp,
+              coins: r.coins,
+              isNewWord: r.isNewWord,
+              message: r.message,
+            };
+            return r.state;
+          });
+          return result;
         }}
         onFail={() => setState((s) => registerWrongWord(s, loc.word))}
       />

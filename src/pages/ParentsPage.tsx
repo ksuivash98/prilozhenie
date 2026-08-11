@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Page } from '../components/Page';
 import { hashPin, useGame } from '../game/store';
+import {
+  getTodayStats,
+  getWeekNewWords,
+  skillBreakdown,
+} from '../services/readingStatsService';
+
+const WEEKDAY = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
 export function ParentsPage() {
   const { state, setState } = useGame();
@@ -32,18 +39,30 @@ export function ParentsPage() {
   }
 
   function exportStats() {
+    const today = getTodayStats(state);
     const payload = {
+      uniqueWords: state.uniqueWords,
       wordsRead: state.wordsRead,
-      correct: state.correct,
-      errors: state.errors,
+      successfulAttempts: state.successfulAttempts || state.correct,
+      repeatedWords: state.repeatedWords,
+      masteredWords: state.masteredWords,
       attempts: state.attempts,
-      accuracy: state.attempts === 0 ? 1 : state.correct / state.attempts,
+      errors: state.errors,
+      accuracy:
+        state.attempts === 0
+          ? 1
+          : (state.successfulAttempts || state.correct) / state.attempts,
+      today,
+      week: getWeekNewWords(state),
+      skills: skillBreakdown(state),
       readingLevel: state.readingLevel,
       level: state.level,
       bossesDefeated: state.bossesDefeated,
       dragonStage: state.dragonStage,
       hardWords: state.hardWords,
       hardLetters: state.hardLetters,
+      legacyWordsRead: state.legacyWordsRead,
+      statisticsVersion: state.statisticsVersion,
       exportedAt: new Date().toISOString(),
     };
     void navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
@@ -87,8 +106,12 @@ export function ParentsPage() {
     );
   }
 
-  const total = state.attempts;
-  const accuracy = total === 0 ? 100 : Math.round((state.correct / total) * 100);
+  const today = getTodayStats(state);
+  const week = getWeekNewWords(state);
+  const skills = skillBreakdown(state);
+  const success = state.successfulAttempts || state.correct;
+  const accuracy =
+    state.attempts === 0 ? 100 : Math.round((success / state.attempts) * 100);
   const hard = Object.entries(state.hardWords)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
@@ -100,10 +123,22 @@ export function ParentsPage() {
 
   return (
     <Page title="Для родителей">
+      <div className="card stack">
+        <strong>Сегодня</strong>
+        <p>Новых слов: {today.newWords}</p>
+        <p>Повторений: {today.repeatedWords}</p>
+        <p>Попыток: {today.attempts}</p>
+        <p>Успешных чтений: {today.successfulAttempts}</p>
+        <p>Точность: {today.accuracy}%</p>
+        <p>
+          Время: {Math.max(0, Math.round(today.durationMs / 60_000))} минут
+        </p>
+      </div>
+
       <div className="stats">
         <div className="card warm stat">
-          <div className="value">{state.wordsRead}</div>
-          <div className="muted">слов</div>
+          <div className="value">{state.uniqueWords}</div>
+          <div className="muted">уникальных</div>
         </div>
         <div className="card warm stat">
           <div className="value">{accuracy}%</div>
@@ -118,10 +153,34 @@ export function ParentsPage() {
           <div className="muted">ур. чтения</div>
         </div>
       </div>
+
+      <div className="card stack">
+        <strong>Навыки</strong>
+        <p>Освоено: {skills.mastered} слов</p>
+        <p>Изучается: {skills.learning} слова</p>
+        <p>Требуют практики: {skills.needsPractice} слов</p>
+      </div>
+
+      <div className="card stack">
+        <strong>Неделя · новые слова</strong>
+        <div className="row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+          {week.map((d) => {
+            const day = WEEKDAY[new Date(d.date + 'T12:00:00').getDay()];
+            return (
+              <div key={d.date} className="card warm center" style={{ minWidth: 52, padding: '0.5rem' }}>
+                <div className="muted">{day}</div>
+                <strong>{d.newWords}</strong>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="card stack">
         <strong>Наблюдение</strong>
         <p>
-          Успешных чтений: {state.correct}. Повторных попыток: {state.errors}.
+          Успешных чтений: {success}. Ошибок: {state.errors}. Повторений:{' '}
+          {state.repeatedWords}.
         </p>
         <p>
           {hard.length === 0

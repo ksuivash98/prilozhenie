@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Page } from '../components/Page';
 import { ReadingChallenge } from '../components/ReadingChallenge';
 import { MINI_GAMES } from '../game/data';
-import { registerCorrectWord, useGame } from '../game/store';
+import { registerCorrectWordDetailed, useGame } from '../game/store';
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
@@ -104,10 +104,25 @@ export function MiniGamePage() {
         storyBeat="Прочитай слово мини-игры"
         xp={10}
         coins={3}
-        onSuccess={({ xp, coins }) => {
-          setScore((s) => s + 5);
-          setMessage('Слово прочитано! +5');
-          setState((s) => registerCorrectWord(s, game.word, { xp, coins }));
+        onSuccess={() => {
+          let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
+          setState((s) => {
+            const r = registerCorrectWordDetailed(s, game.word, { xp: 10, coins: 3 });
+            result = {
+              xp: r.xp,
+              coins: r.coins,
+              isNewWord: r.isNewWord,
+              message: r.message,
+            };
+            return r.state;
+          });
+          if (result.isNewWord) {
+            setScore((s) => s + 5);
+            setMessage('Новое слово! +5');
+          } else {
+            setMessage('Отличное повторение!');
+          }
+          return result;
         }}
       />
     </Page>

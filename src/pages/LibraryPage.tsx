@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Page } from '../components/Page';
 import { STORIES } from '../game/data';
-import { registerCorrectWord, useGame } from '../game/store';
+import { useGame } from '../game/store';
+import { applyStoryReward } from '../services/readingStatsService';
 
 export function LibraryPage() {
   const { state, setState, speak } = useGame();
@@ -11,13 +12,7 @@ export function LibraryPage() {
 
   function finishStory() {
     if (!story) return;
-    setState((s) => ({
-      ...registerCorrectWord(s, story.title, { xp: 20, coins: 8 }),
-      storiesRead: s.storiesRead.includes(story.id)
-        ? s.storiesRead
-        : [...s.storiesRead, story.id],
-      wordsRead: s.wordsRead + story.pages.length,
-    }));
+    setState((s) => applyStoryReward(s, story.id));
     setActive(null);
     setPage(0);
   }

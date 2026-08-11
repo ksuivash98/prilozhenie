@@ -2,7 +2,7 @@ import { Page } from '../components/Page';
 import { Meter } from '../components/Meter';
 import { ReadingChallenge } from '../components/ReadingChallenge';
 import { STAGE_EMOJI, STAGE_LABEL } from '../game/data';
-import { dragonXpNeed, registerCorrectWord, useGame } from '../game/store';
+import { dragonXpNeed, registerCorrectWordDetailed, useGame } from '../game/store';
 
 export function DragonPage() {
   const { state, setState } = useGame();
@@ -31,9 +31,20 @@ export function DragonPage() {
         storyBeat="Прочитай название еды"
         xp={15}
         coins={5}
-        onSuccess={({ xp, coins }) =>
-          setState((s) => registerCorrectWord(s, 'яблоко', { xp, coins }))
-        }
+        onSuccess={() => {
+          let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
+          setState((s) => {
+            const r = registerCorrectWordDetailed(s, 'яблоко', { xp: 15, coins: 5 });
+            result = {
+              xp: r.xp,
+              coins: r.coins,
+              isNewWord: r.isNewWord,
+              message: r.message,
+            };
+            return r.state;
+          });
+          return result;
+        }}
       />
     </Page>
   );

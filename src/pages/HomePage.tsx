@@ -43,7 +43,7 @@ export function HomePage() {
         <p className="muted">🌱 Каждое прочитанное слово возвращает краски!</p>
       </div>
 
-      <LumiBubble tone="celebrate" seed={state.wordsRead} />
+      <LumiBubble tone="celebrate" seed={state.uniqueWords} />
 
       <div className="card row">
         <div style={{ fontSize: '3.4rem' }}>
@@ -64,8 +64,8 @@ export function HomePage() {
 
       <div className="row">
         <div className="card warm grow center stat">
-          <div className="value">{state.wordsRead}</div>
-          <div className="muted">слов</div>
+          <div className="value">{state.uniqueWords}</div>
+          <div className="muted">выучено</div>
         </div>
         <div className="card warm grow center stat">
           <div className="value">{state.level}</div>
