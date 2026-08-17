@@ -4,6 +4,8 @@ import { Page } from '../components/Page';
 import { ReadingChallenge } from '../components/ReadingChallenge';
 import { MINI_GAMES } from '../game/data';
 import { registerCorrectWordDetailed, useGame } from '../game/store';
+import { getMiniGamePlay, recordMiniGamePlay } from '../services/miniGameRewardService';
+import { MAX_REWARDED_MINI_GAME_PLAYS } from '../types/readingStats';
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
@@ -12,7 +14,7 @@ function shuffle<T>(arr: T[]): T[] {
 export function MiniGamePage() {
   const { gameId = '' } = useParams();
   const game = MINI_GAMES.find((g) => g.id === gameId) ?? MINI_GAMES[0];
-  const { setState } = useGame();
+  const { state, setState } = useGame();
   const [score, setScore] = useState(0);
   const [step, setStep] = useState(0);
   const [message, setMessage] = useState('Сделай ход!');
@@ -58,6 +60,9 @@ export function MiniGamePage() {
     setMessage('Верно! +10');
   }
 
+  const playInfo = getMiniGamePlay(state, game.id);
+  const rewardsLeft = Math.max(0, MAX_REWARDED_MINI_GAME_PLAYS - playInfo.rewardedPlayCount);
+
   return (
     <Page title={game.title} backTo="/mini-games">
       <div className="card warm stack center">
@@ -65,6 +70,12 @@ export function MiniGamePage() {
         <p>{game.description}</p>
         <strong>Счёт: {score}</strong>
         <p className="muted">{message}</p>
+        {rewardsLeft === 0 && (
+          <p>
+            Ты уже получил награду за эту игру. Попробуй другое приключение, чтобы получить
+            новые награды!
+          </p>
+        )}
       </div>
 
       <div className="card stack">
@@ -108,17 +119,25 @@ export function MiniGamePage() {
           let result = { xp: 0, coins: 0, isNewWord: false, message: '' };
           setState((s) => {
             const r = registerCorrectWordDetailed(s, game.word, { xp: 10, coins: 3 });
+            const play = recordMiniGamePlay(r.state, game.id);
             result = {
-              xp: r.xp,
-              coins: r.coins,
+              xp: r.xp + play.reward.xp,
+              coins: r.coins + play.reward.coins,
               isNewWord: r.isNewWord,
-              message: r.message,
+              message: play.rewarded
+                ? r.message
+                : play.message,
             };
-            return r.state;
+            return play.state;
           });
-          if (result.isNewWord) {
+          if (!result.xp && !result.coins && !result.isNewWord) {
+            setMessage(result.message);
+          } else if (result.isNewWord) {
             setScore((s) => s + 5);
-            setMessage('Новое слово! +5');
+            setMessage('Новое слово!');
+          } else if (result.xp > 0) {
+            setScore((s) => s + 5);
+            setMessage('🎮 Отличная игра!');
           } else {
             setMessage('Отличное повторение!');
           }

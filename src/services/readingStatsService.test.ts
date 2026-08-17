@@ -82,13 +82,14 @@ describe('readingStatsService', () => {
     const rec = s.readingRecords[makeWordId('КОТ')];
     expect(rec.successCount).toBe(10);
     expect(rec.isMastered).toBe(false);
-    expect(rec.successfulSessionDates).toHaveLength(1);
+    expect(rec.masteryLevel).toBeLessThan(4);
+    expect(rec.successfulSessionIds).toHaveLength(1);
     expect(s.uniqueWords).toBe(1);
   });
 
   it('стабильный wordId', () => {
     expect(makeWordId('КОТ')).toBe(makeWordId('кот'));
-    expect(makeWordId('КОТ', 'unit_1')).toBe('unit_1');
+    expect(makeWordId('КОТ')).toBe('word_кот');
   });
 
   it('миграция legacy не выдумывает уникальные слова', () => {
@@ -97,7 +98,7 @@ describe('readingStatsService', () => {
       correct: 200,
       attempts: 250,
     });
-    expect(migrated.statisticsVersion).toBe(2);
+    expect(migrated.statisticsVersion).toBe(3);
     expect(migrated.legacyWordsRead).toBe(120);
     expect(migrated.uniqueWords).toBe(0);
     expect(migrated.wordsRead).toBe(0);

@@ -1,29 +1,64 @@
-import type { GameState } from '../game/data';
+import type { GameState, LocationId } from '../game/data';
+import { LOCATIONS } from '../game/data';
+import { chapterById, chapterByLocation, introducingChapterId } from '../data/chapters';
 import type {
+  MasteryLevel,
   ReadingOutcome,
   ReadingRecord,
   ReadingSession,
 } from '../types/readingStats';
-import { STATISTICS_VERSION } from '../types/readingStats';
-import { getReward, scaleNewWordReward } from './rewardService';
+import { SESSION_GAP_MS, STATISTICS_VERSION } from '../types/readingStats';
+import { applyRewardsToState, getReward, scaleNewWordReward } from './rewardService';
 import { normalizeSpeech } from './fuzzyMatch';
+import { makeWordId, todayKey } from './wordId';
 
-/** Стабильный wordId по тексту (и опциональному unitId). */
-export function makeWordId(word: string, unitId?: string): string {
-  if (unitId && unitId.trim()) return unitId.trim();
-  const normalized = normalizeSpeech(word).replace(/\s+/g, '_');
-  return `word_${normalized || 'unknown'}`;
-}
-
-export function todayKey(date = new Date()): string {
-  return date.toISOString().slice(0, 10);
-}
+export { makeWordId, todayKey };
 
 function difficultyOf(word: string): ReadingRecord['difficulty'] {
   const len = normalizeSpeech(word).length;
   if (len <= 3) return 'easy';
   if (len <= 6) return 'medium';
   return 'hard';
+}
+
+function accuracyOf(success: number, attempts: number): number {
+  if (attempts <= 0) return 0;
+  return success / attempts;
+}
+
+/**
+ * Освоение по разным сессиям, а не по спаму в одну минуту.
+ * 10 успехов подряд в одной сессии → максимум «изучается».
+ */
+export function computeMasteryLevel(record: ReadingRecord): MasteryLevel {
+  const success = record.successCount;
+  if (success <= 0) return 0;
+
+  const sessionCount = new Set([
+    ...(record.successfulSessionIds ?? []),
+  ]).size;
+  const dateCount = new Set(record.successfulSessionDates ?? []).size;
+  const distinct = Math.max(sessionCount, dateCount);
+  const accuracy = accuracyOf(success, record.attemptCount);
+  const errors = record.errorCount ?? record.failCount ?? 0;
+
+  if (distinct >= 3 && success >= 3 && accuracy >= 0.7 && errors < success) {
+    return 4;
+  }
+  if (distinct >= 2 && success >= 2) return 3;
+  if (success >= 2) return 2;
+  return 1;
+}
+
+export function applyMastery(record: ReadingRecord): ReadingRecord {
+  const masteryLevel = computeMasteryLevel(record);
+  return {
+    ...record,
+    masteryLevel,
+    isMastered: masteryLevel === 4,
+    accuracy: accuracyOf(record.successCount, record.attemptCount),
+    errorCount: record.failCount,
+  };
 }
 
 function emptySession(date: string): ReadingSession {
@@ -51,74 +86,48 @@ function touchSession(
   };
 }
 
-function applyMastery(record: ReadingRecord): ReadingRecord {
-  // Освоено: успехи в ≥3 разных учебных днях (не спам за минуту)
-  const mastered = record.successfulSessionDates.length >= 3;
-  return { ...record, isMastered: mastered };
-}
-
 function recountUnique(records: Record<string, ReadingRecord>): number {
   return Object.values(records).filter((r) => r.successCount > 0).length;
 }
 
-function applyXpRewards(
-  state: GameState,
-  reward: { xp: number; coins: number; crystals: number },
-): GameState {
-  let next: GameState = {
+export function ensureReadingSession(state: GameState, now = Date.now()): GameState {
+  const last = state.lastSessionAt ?? 0;
+  if (state.readingSessionId && now - last < SESSION_GAP_MS) {
+    return { ...state, lastSessionAt: now };
+  }
+  return {
     ...state,
-    xp: state.xp + reward.xp,
-    coins: state.coins + reward.coins,
-    crystals: state.crystals + reward.crystals,
-    dragonXp: state.dragonXp + reward.xp,
+    readingSessionId: `sess_${now}`,
+    lastSessionAt: now,
   };
+}
 
-  // level-up helpers imported lazily via circular-safe inline
-  const xpNeed = (level: number) => 100 + level * 50;
-  while (next.xp >= xpNeed(next.level)) {
-    next = {
-      ...next,
-      xp: next.xp - xpNeed(next.level),
-      level: next.level + 1,
-    };
-  }
-
-  const stageNeed = (stage: GameState['dragonStage']) => {
-    switch (stage) {
-      case 'egg':
-        return 50;
-      case 'baby':
-        return 200;
-      case 'teen':
-        return 600;
-      case 'adult':
-        return 1500;
-      default:
-        return 0;
-    }
+function blankRecord(wordId: string, display: string, now: number, chapterId?: number): ReadingRecord {
+  return {
+    id: `rec_${wordId}`,
+    wordId,
+    word: display,
+    chapterId,
+    attemptCount: 0,
+    successCount: 0,
+    failCount: 0,
+    errorCount: 0,
+    accuracy: 0,
+    firstSeenAt: now,
+    firstSuccessfulAt: null,
+    lastAttemptAt: now,
+    lastSuccessfulAt: null,
+    successfulSessionDates: [],
+    successfulSessionIds: [],
+    masteryLevel: 0,
+    isMastered: false,
+    difficulty: difficultyOf(display),
   };
-  const stages: GameState['dragonStage'][] = [
-    'egg',
-    'baby',
-    'teen',
-    'adult',
-    'legendary',
-  ];
-  const need = stageNeed(next.dragonStage);
-  if (need > 0 && next.dragonXp >= need && next.dragonStage !== 'legendary') {
-    const idx = stages.indexOf(next.dragonStage);
-    next = {
-      ...next,
-      dragonStage: stages[Math.min(idx + 1, stages.length - 1)],
-      dragonXp: next.dragonXp - need,
-    };
-  }
-
-  return next;
 }
 
 export interface RecordSuccessOptions {
   unitId?: string;
+  chapterId?: number;
   /** Базовая награда только для НОВОГО слова. */
   newWordReward?: { xp?: number; coins?: number; crystals?: number };
   kind?: 'NEW_WORD' | 'NEW_SENTENCE' | 'NEW_STORY';
@@ -133,43 +142,47 @@ export function recordSuccessfulReading(
   word: string,
   options: RecordSuccessOptions = {},
 ): ReadingOutcome {
-  const wordId = makeWordId(word, options.unitId);
+  state = ensureReadingSession(state);
+  const wordId = makeWordId(word);
   const display = word.trim() || wordId;
   const now = Date.now();
   const date = todayKey();
+  const sessionId = state.readingSessionId;
   const records = { ...state.readingRecords };
   const existing = records[wordId];
   const isNewWord = !existing || existing.successCount === 0;
+  const chapterId =
+    existing?.chapterId ?? options.chapterId ?? introducingChapterId(wordId);
 
   let record: ReadingRecord;
   if (!existing) {
-    record = {
-      id: `rec_${wordId}`,
-      wordId,
-      word: display,
+    record = applyMastery({
+      ...blankRecord(wordId, display, now, chapterId),
       attemptCount: 1,
       successCount: 1,
-      failCount: 0,
       firstSuccessfulAt: now,
-      lastAttemptAt: now,
       lastSuccessfulAt: now,
       successfulSessionDates: [date],
-      isMastered: false,
-      difficulty: difficultyOf(display),
-    };
+      successfulSessionIds: sessionId ? [sessionId] : [],
+    });
   } else {
     const dates = existing.successfulSessionDates.includes(date)
       ? existing.successfulSessionDates
       : [...existing.successfulSessionDates, date];
+    const ids = sessionId && !(existing.successfulSessionIds ?? []).includes(sessionId)
+      ? [...(existing.successfulSessionIds ?? []), sessionId]
+      : (existing.successfulSessionIds ?? (sessionId ? [sessionId] : []));
     record = applyMastery({
       ...existing,
       word: display,
+      chapterId: existing.chapterId ?? chapterId,
       attemptCount: existing.attemptCount + 1,
       successCount: existing.successCount + 1,
       lastAttemptAt: now,
       lastSuccessfulAt: now,
       firstSuccessfulAt: existing.firstSuccessfulAt ?? now,
       successfulSessionDates: dates,
+      successfulSessionIds: ids,
     });
   }
   records[wordId] = record;
@@ -182,10 +195,10 @@ export function recordSuccessfulReading(
     : getReward('REPEATED_WORD');
 
   const uniqueWords = recountUnique(records);
-  const repeatedWords = state.repeatedWords + (isNewWord ? 0 : 1);
+  const repeatedWords = (state.repeatedWords ?? 0) + (isNewWord ? 0 : 1);
 
   const prevSession = state.dailySessions[date];
-  let sessions = touchSession(state.dailySessions, date, {
+  const sessions = touchSession(state.dailySessions, date, {
     attempts: (prevSession?.attempts ?? 0) + 1,
     successfulAttempts: (prevSession?.successfulAttempts ?? 0) + 1,
     newWords: (prevSession?.newWords ?? 0) + (isNewWord ? 1 : 0),
@@ -195,7 +208,6 @@ export function recordSuccessfulReading(
         r.successCount > 0 &&
         r.successfulSessionDates.includes(date),
     ).length,
-    // Оценка длительности: ~20 сек на попытку чтения
     durationMs: (prevSession?.durationMs ?? 0) + 20_000,
   });
 
@@ -221,7 +233,7 @@ export function recordSuccessfulReading(
         : state.completedUnits,
   };
 
-  next = applyXpRewards(next, reward);
+  next = applyRewardsToState(next, reward);
 
   if (
     isNewWord &&
@@ -232,48 +244,43 @@ export function recordSuccessfulReading(
     next = { ...next, readingLevel: next.readingLevel + 1 };
   }
 
+  const repeatMessage =
+    record.successCount >= 2
+      ? `Ты потренировал слово ${display.toUpperCase()} ${record.successCount} раз.`
+      : '🔄 Отличное повторение!';
+
   return {
     state: next,
     isNewWord,
     isRepeat: !isNewWord,
     reward,
-    message: isNewWord
-      ? '🎉 Новое слово!'
-      : '🔄 Отличное повторение!',
+    message: isNewWord ? '🎉 Новое слово!' : repeatMessage,
     wordId,
   };
 }
 
 /** Фиксирует неуспешную попытку (без наград). */
 export function recordFailedReading(state: GameState, word: string, unitId?: string): GameState {
-  const wordId = makeWordId(word, unitId);
+  void unitId;
+  state = ensureReadingSession(state);
+  const wordId = makeWordId(word);
   const display = word.trim() || wordId;
   const now = Date.now();
   const date = todayKey();
   const records = { ...state.readingRecords };
   const existing = records[wordId];
+  const chapterId = existing?.chapterId ?? introducingChapterId(wordId);
+  const base = existing ?? blankRecord(wordId, display, now, chapterId);
 
-  records[wordId] = existing
-    ? {
-        ...existing,
-        attemptCount: existing.attemptCount + 1,
-        failCount: existing.failCount + 1,
-        lastAttemptAt: now,
-      }
-    : {
-        id: `rec_${wordId}`,
-        wordId,
-        word: display,
-        attemptCount: 1,
-        successCount: 0,
-        failCount: 1,
-        firstSuccessfulAt: null,
-        lastAttemptAt: now,
-        lastSuccessfulAt: null,
-        successfulSessionDates: [],
-        isMastered: false,
-        difficulty: difficultyOf(display),
-      };
+  records[wordId] = applyMastery({
+    ...base,
+    word: display,
+    chapterId: base.chapterId ?? chapterId,
+    attemptCount: base.attemptCount + 1,
+    failCount: base.failCount + 1,
+    errorCount: (base.errorCount ?? base.failCount) + 1,
+    lastAttemptAt: now,
+  });
 
   const hardWords = { ...state.hardWords };
   hardWords[display] = (hardWords[display] ?? 0) + 1;
@@ -301,30 +308,81 @@ export function recordFailedReading(state: GameState, word: string, unitId?: str
   };
 }
 
-/** Миграция со старой статистики (version < 2). */
+function upgradeRecord(raw: Partial<ReadingRecord> & { wordId: string }): ReadingRecord {
+  const fail = raw.failCount ?? raw.errorCount ?? 0;
+  const success = raw.successCount ?? 0;
+  const attempts = raw.attemptCount ?? success + fail;
+  const rec: ReadingRecord = {
+    id: raw.id ?? `rec_${raw.wordId}`,
+    wordId: raw.wordId,
+    word: raw.word ?? raw.wordId,
+    chapterId: raw.chapterId,
+    attemptCount: attempts,
+    successCount: success,
+    failCount: fail,
+    errorCount: fail,
+    accuracy: accuracyOf(success, attempts),
+    firstSeenAt: raw.firstSeenAt ?? raw.firstSuccessfulAt ?? raw.lastAttemptAt ?? Date.now(),
+    firstSuccessfulAt: raw.firstSuccessfulAt ?? null,
+    lastAttemptAt: raw.lastAttemptAt ?? Date.now(),
+    lastSuccessfulAt: raw.lastSuccessfulAt ?? null,
+    successfulSessionDates: raw.successfulSessionDates ?? [],
+    successfulSessionIds: raw.successfulSessionIds ?? [],
+    masteryLevel: 0,
+    isMastered: false,
+    difficulty: raw.difficulty ?? 'medium',
+  };
+  return applyMastery(rec);
+}
+
+/** Миграция со старой статистики. */
 export function migrateReadingStats(raw: Partial<GameState>): Partial<GameState> {
   const version = raw.statisticsVersion ?? 1;
-  if (version >= STATISTICS_VERSION) {
+
+  if (version < 2) {
     return {
       ...raw,
-      wordsRead: raw.uniqueWords ?? Object.keys(raw.readingRecords ?? {}).length,
-      uniqueWords: raw.uniqueWords ?? Object.keys(raw.readingRecords ?? {}).length,
-      successfulAttempts: raw.successfulAttempts ?? raw.correct ?? 0,
+      statisticsVersion: STATISTICS_VERSION,
+      legacyWordsRead: raw.wordsRead ?? 0,
+      readingRecords: {},
+      dailySessions: {},
+      uniqueWords: 0,
+      wordsRead: 0,
+      successfulAttempts: raw.correct ?? 0,
+      repeatedWords: 0,
+      masteredWords: 0,
+      miniGamePlays: {},
+      completedMinibosses: [],
+      completedChapters: [],
+      preparedChapters: [],
+      worldUnlocks: [],
+      readingSessionId: `sess_${Date.now()}`,
+      lastSessionAt: Date.now(),
     };
   }
 
-  // Legacy: нельзя достоверно восстановить уникальные слова
+  const records: Record<string, ReadingRecord> = {};
+  for (const [id, rec] of Object.entries(raw.readingRecords ?? {})) {
+    records[id] = upgradeRecord({ ...rec, wordId: rec.wordId || id });
+  }
+  const uniqueWords =
+    raw.uniqueWords ?? Object.values(records).filter((r) => r.successCount > 0).length;
+
   return {
     ...raw,
     statisticsVersion: STATISTICS_VERSION,
-    legacyWordsRead: raw.wordsRead ?? 0,
-    readingRecords: {},
-    dailySessions: {},
-    uniqueWords: 0,
-    wordsRead: 0,
-    successfulAttempts: raw.correct ?? 0,
-    repeatedWords: 0,
-    masteredWords: 0,
+    readingRecords: records,
+    uniqueWords,
+    wordsRead: uniqueWords,
+    successfulAttempts: raw.successfulAttempts ?? raw.correct ?? 0,
+    miniGamePlays: raw.miniGamePlays ?? {},
+    completedMinibosses: raw.completedMinibosses ?? [],
+    completedChapters: raw.completedChapters ?? [],
+    preparedChapters: raw.preparedChapters ?? [],
+    worldUnlocks: raw.worldUnlocks ?? [],
+    readingSessionId: raw.readingSessionId ?? `sess_${Date.now()}`,
+    lastSessionAt: raw.lastSessionAt ?? Date.now(),
+    masteredWords: Object.values(records).filter((r) => r.isMastered).length,
   };
 }
 
@@ -357,25 +415,25 @@ export function getWeekNewWords(state: GameState): { date: string; newWords: num
 
 export function skillBreakdown(state: GameState) {
   const records = Object.values(state.readingRecords ?? {});
-  const mastered = records.filter((r) => r.isMastered).length;
+  const mastered = records.filter((r) => r.masteryLevel === 4 || r.isMastered).length;
   const learning = records.filter(
-    (r) => r.successCount > 0 && !r.isMastered,
+    (r) => r.successCount > 0 && r.masteryLevel < 4 && !r.isMastered,
   ).length;
-  const needsPractice = records.filter(
-    (r) => r.failCount > r.successCount || (r.successCount > 0 && r.failCount >= 2),
-  ).length;
+  const needsPractice = records.filter((r) => isCriticalWord(r)).length;
   return { mastered, learning, needsPractice };
 }
 
-/**
- * Для открытий города/мини-игр: не ломаем прогресс после миграции.
- * UI «выучено слов» по-прежнему показывает uniqueWords.
- */
+export function isCriticalWord(record: ReadingRecord): boolean {
+  const accuracy = accuracyOf(record.successCount, record.attemptCount);
+  const errors = record.errorCount ?? record.failCount;
+  const unstable = errors >= 3 && record.successCount < 2;
+  return (record.attemptCount > 0 && accuracy < 0.5) || unstable;
+}
+
 export function unlockProgressWords(state: GameState): number {
   return Math.max(state.uniqueWords ?? 0, state.legacyWordsRead ?? 0);
 }
 
-/** Награда за рассказ (не считается новым учебным словом). */
 export function applyStoryReward(state: GameState, storyId: string): GameState {
   if (state.storiesRead.includes(storyId)) return state;
   const reward = getReward('NEW_STORY');
@@ -384,6 +442,51 @@ export function applyStoryReward(state: GameState, storyId: string): GameState {
     storiesRead: [...state.storiesRead, storyId],
     statisticsVersion: STATISTICS_VERSION,
   };
-  next = applyXpRewards(next, reward);
+  next = applyRewardsToState(next, reward);
   return next;
 }
+
+/** Победа над главным боссом: глава завершена, уникальная награда один раз. */
+export function completeChapter(state: GameState, locationId: LocationId): GameState {
+  const chapter = chapterByLocation(locationId);
+  if (!chapter) return state;
+  if (state.completedChapters.includes(chapter.id)) return state;
+
+  const order = LOCATIONS.map((l) => l.id);
+  const idx = order.indexOf(locationId);
+  const nextId = idx >= 0 && idx < order.length - 1 ? order[idx + 1] : null;
+  const unlocked = nextId && !state.unlockedLocations.includes(nextId)
+    ? [...state.unlockedLocations, nextId]
+    : state.unlockedLocations;
+
+  let next: GameState = {
+    ...state,
+    completedChapters: [...state.completedChapters, chapter.id],
+    unlockedLocations: unlocked,
+    currentLocation: nextId ?? state.currentLocation,
+    bossesDefeated: state.bossesDefeated + 1,
+    worldUnlocks: state.worldUnlocks.includes(chapter.unlock.id)
+      ? state.worldUnlocks
+      : [...state.worldUnlocks, chapter.unlock.id],
+  };
+  next = applyRewardsToState(next, getReward('CHAPTER_CLEAR'));
+  return next;
+}
+
+export function markMinibossComplete(state: GameState, miniBossId: string): GameState {
+  if (state.completedMinibosses.includes(miniBossId)) return state;
+  return {
+    ...state,
+    completedMinibosses: [...state.completedMinibosses, miniBossId],
+  };
+}
+
+export function markChapterPrepared(state: GameState, chapterId: number): GameState {
+  if (state.preparedChapters.includes(chapterId)) return state;
+  return {
+    ...state,
+    preparedChapters: [...state.preparedChapters, chapterId],
+  };
+}
+
+export { chapterById, chapterByLocation };

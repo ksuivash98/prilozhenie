@@ -567,9 +567,61 @@ html.large-text .reading-word {
   font-size: clamp(2.4rem, 10vw, 3.6rem) !important;
 }
 
-html.reduce-motion *,
-html.reduce-motion *::before,
-html.reduce-motion *::after {
-  animation: none !important;
-  transition: none !important;
+.word-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.word-chip {
+  background: white;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-weight: 800;
+  font-size: 0.9rem;
+  opacity: 0.55;
+}
+
+.word-chip.known {
+  opacity: 1;
+  background: color-mix(in srgb, var(--teal) 25%, white);
+}
+
+.chapter-path {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.65rem;
+}
+
+.path-node {
+  border: none;
+  border-radius: 18px;
+  background: white;
+  padding: 0.75rem 0.5rem;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  display: grid;
+  gap: 0.2rem;
+  place-items: center;
+  font-weight: 800;
+}
+
+.path-node .emoji {
+  font-size: 1.8rem;
+}
+
+.path-node small {
+  font-weight: 650;
+  color: var(--ink-soft);
+}
+
+.path-node.done {
+  background: color-mix(in srgb, var(--success) 22%, white);
+}
+
+.path-node.locked {
+  opacity: 0.45;
+  filter: grayscale(1);
+  cursor: not-allowed;
 }

@@ -109,6 +109,11 @@ export function ParentsPage() {
   const today = getTodayStats(state);
   const week = getWeekNewWords(state);
   const skills = skillBreakdown(state);
+  const masteryCounts = [0, 1, 2, 3, 4].map(
+    (lvl) =>
+      Object.values(state.readingRecords ?? {}).filter((r) => (r.masteryLevel ?? 0) === lvl)
+        .length,
+  );
   const success = state.successfulAttempts || state.correct;
   const accuracy =
     state.attempts === 0 ? 100 : Math.round((success / state.attempts) * 100);
@@ -159,6 +164,10 @@ export function ParentsPage() {
         <p>Освоено: {skills.mastered} слов</p>
         <p>Изучается: {skills.learning} слова</p>
         <p>Требуют практики: {skills.needsPractice} слов</p>
+        <p className="muted">
+          Уровни освоения: знакомство {masteryCounts[1]}, изучается {masteryCounts[2]},
+          закрепляется {masteryCounts[3]}, освоено {masteryCounts[4]}.
+        </p>
       </div>
 
       <div className="card stack">

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { LumiBubble } from '../components/LumiBubble';
 import { Meter } from '../components/Meter';
 import { STAGE_EMOJI, STAGE_LABEL } from '../game/data';
+import { CHAPTERS } from '../data/chapters';
 import { dragonXpNeed, useGame } from '../game/store';
 
 const TILES = [
@@ -80,6 +81,16 @@ export function HomePage() {
           <div className="muted">кристаллы</div>
         </div>
       </div>
+
+      {state.worldUnlocks.length > 0 && (
+        <div className="card row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+          {CHAPTERS.filter((c) => state.worldUnlocks.includes(c.unlock.id)).map((c) => (
+            <span key={c.unlock.id} className="word-chip known">
+              {c.unlock.emoji} {c.unlock.name}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="grid hub">
         {TILES.map((t) => (

@@ -7,6 +7,7 @@ import { LearnPage } from './pages/LearnPage';
 import { AdventurePage } from './pages/AdventurePage';
 import { LocationPage } from './pages/LocationPage';
 import { BattlePage } from './pages/BattlePage';
+import { PreparePage } from './pages/PreparePage';
 import { DragonPage } from './pages/DragonPage';
 import { MiniGamesHubPage } from './pages/MiniGamesHubPage';
 import { MiniGamePage } from './pages/MiniGamePage';
@@ -28,6 +29,8 @@ export default function App() {
         <Route path="/adventure" element={<AdventurePage />} />
         <Route path="/adventure/:locationId" element={<LocationPage />} />
         <Route path="/battle/:locationId" element={<BattlePage />} />
+        <Route path="/battle/:locationId/:stage" element={<BattlePage />} />
+        <Route path="/adventure/:locationId/prepare" element={<PreparePage />} />
         <Route path="/dragon" element={<DragonPage />} />
         <Route path="/mini-games" element={<MiniGamesHubPage />} />
         <Route path="/mini-games/:gameId" element={<MiniGamePage />} />

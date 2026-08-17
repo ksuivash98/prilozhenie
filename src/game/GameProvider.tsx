@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { GameContext, applyTimeDecay, loadState, saveState } from '../game/store';
+import { GameContext, applyTimeDecay, ensureReadingSession, loadState, saveState } from '../game/store';
 import type { GameState } from '../game/data';
 import { LivingBackground } from '../components/LivingBackground';
 import { speechSynthesisService } from '../services/speechSynthesisService';
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const [state, setStateRaw] = useState<GameState>(() => applyTimeDecay(loadState()));
+  const [state, setStateRaw] = useState<GameState>(() =>
+    ensureReadingSession(applyTimeDecay(loadState())),
+  );
 
   useEffect(() => {
     saveState(state);

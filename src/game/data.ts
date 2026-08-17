@@ -56,6 +56,13 @@ export interface GameState {
   legacyWordsRead?: number;
   readingRecords: Record<string, import('../types/readingStats').ReadingRecord>;
   dailySessions: Record<string, import('../types/readingStats').ReadingSession>;
+  miniGamePlays: Record<string, import('../types/readingStats').MiniGamePlayRecord>;
+  completedMinibosses: string[];
+  completedChapters: number[];
+  preparedChapters: number[];
+  worldUnlocks: string[];
+  readingSessionId: string;
+  lastSessionAt: number;
   xp: number;
   coins: number;
   crystals: number;

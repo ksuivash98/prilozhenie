@@ -7,13 +7,15 @@ import {
 } from './data';
 import { STATISTICS_VERSION } from '../types/readingStats';
 import {
+  completeChapter,
+  ensureReadingSession,
   migrateReadingStats,
   recordFailedReading,
   recordSuccessfulReading,
   unlockProgressWords,
 } from '../services/readingStatsService';
 
-export { unlockProgressWords };
+export { unlockProgressWords, completeChapter, ensureReadingSession };
 
 const STORAGE_KEY = 'readquest_web_v2';
 
@@ -28,6 +30,13 @@ export const initialState = (): GameState => ({
   statisticsVersion: STATISTICS_VERSION,
   readingRecords: {},
   dailySessions: {},
+  miniGamePlays: {},
+  completedMinibosses: [],
+  completedChapters: [],
+  preparedChapters: [],
+  worldUnlocks: [],
+  readingSessionId: `sess_${Date.now()}`,
+  lastSessionAt: Date.now(),
   xp: 0,
   coins: 0,
   crystals: 0,
@@ -64,7 +73,7 @@ export function loadState(): GameState {
     if (!raw) return initialState();
     const parsed = JSON.parse(raw) as Partial<GameState>;
     const migrated = migrateReadingStats(parsed);
-    return { ...initialState(), ...migrated };
+    return ensureReadingSession({ ...initialState(), ...migrated });
   } catch {
     return initialState();
   }
@@ -182,21 +191,8 @@ export function adaptivePracticeWords(state: GameState): string[] {
   return bank.filter((w) => hard.some((l) => w.includes(l))).slice(0, 5);
 }
 
-export function unlockNextLocation(state: GameState): GameState {
-  const order = LOCATIONS.map((l) => l.id);
-  const idx = order.indexOf(state.currentLocation);
-  if (idx < 0 || idx >= order.length - 1) return state;
-  const nextId = order[idx + 1];
-  if (state.unlockedLocations.includes(nextId)) return state;
-  return {
-    ...state,
-    unlockedLocations: [...state.unlockedLocations, nextId],
-    currentLocation: nextId,
-    bossesDefeated: state.bossesDefeated + 1,
-    xp: state.xp + 100,
-    coins: state.coins + 25,
-    crystals: state.crystals + 1,
-  };
+export function unlockNextLocation(state: GameState, locationId?: LocationId): GameState {
+  return completeChapter(state, locationId ?? state.currentLocation);
 }
 
 export function hashPin(pin: string): string {
